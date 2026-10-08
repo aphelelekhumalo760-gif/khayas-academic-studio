@@ -676,46 +676,51 @@ async function openResource(
     const resource =
         resources.find(
             function(item) {
-
                 return item.id === resourceId;
-
             }
         );
-
 
     if (!resource) {
         return;
     }
 
-
     if (!resource.file_path) {
-
         alert(
             "This resource does not have a PDF attached yet."
         );
-
         return;
     }
 
+    /*
+     * PUBLIC RESOURCE FIX
+     *
+     * Public guides are served directly from the Supabase
+     * Storage bucket. This avoids signed-URL failures for
+     * normal website visitors.
+     *
+     * IMPORTANT:
+     * The "academic-resources" bucket must be set to PUBLIC
+     * in Supabase Storage.
+     */
 
     const {
-        data,
-        error
+        data
     } =
-        await supabase
+        supabase
             .storage
             .from(BUCKET)
-            .createSignedUrl(
-                resource.file_path,
-                1800
+            .getPublicUrl(
+                resource.file_path
             );
 
+    const publicUrl =
+        data?.publicUrl;
 
-    if (error) {
+    if (!publicUrl) {
 
         console.error(
-            "PDF access error:",
-            error
+            "Could not create public PDF URL.",
+            resource
         );
 
         alert(
@@ -725,17 +730,11 @@ async function openResource(
         return;
     }
 
-
-    if (data?.signedUrl) {
-
-        window.open(
-            data.signedUrl,
-            "_blank",
-            "noopener"
-        );
-
-    }
-
+    window.open(
+        publicUrl,
+        "_blank",
+        "noopener"
+    );
 }
 
 
